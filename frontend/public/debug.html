@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug LocalWorker</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .debug-box {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🔍 LocalWorker Debug Page</h1>
+    
+    <div class="debug-box">
+        <h2>Quick Checks:</h2>
+        <p id="status">Checking...</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>Frontend Server:</h3>
+        <p>✅ This page loaded = Frontend is running</p>
+        <p>📍 URL: <span id="url"></span></p>
+    </div>
+
+    <div class="debug-box">
+        <h3>Backend Server:</h3>
+        <p id="backend-status">Testing backend connection...</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>Quick Actions:</h3>
+        <button onclick="window.location.href='http://localhost:5173'">Open Frontend</button>
+        <button onclick="testBackend()">Test Backend</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Common Issues & Fixes:</h3>
+        <ul>
+            <li>❌ White screen = Check browser console (F12)</li>
+            <li>❌ Cannot connect = Restart frontend server</li>
+            <li>❌ API errors = Check backend is running on port 5000</li>
+        </ul>
+    </div>
+
+    <script>
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('status').textContent = '✅ Debug page loaded successfully!';
+        document.getElementById('status').parentElement.classList.add('success');
+
+        async function testBackend() {
+            const statusEl = document.getElementById('backend-status');
+            statusEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/health');
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusEl.innerHTML = '✅ Backend is running!<br>Message: ' + data.message;
+                    statusEl.parentElement.classList.add('success');
+                } else {
+                    statusEl.textContent = '⚠️ Backend responded but with error';
+                    statusEl.parentElement.classList.add('error');
+                }
+            } catch (error) {
+                statusEl.innerHTML = '❌ Cannot connect to backend<br>Error: ' + error.message + '<br>Make sure backend server is running on port 5000';
+                statusEl.parentElement.classList.add('error');
+            }
+        }
+
+        // Auto-test backend on load
+        testBackend();
+    </script>
+</body>
+</html>
