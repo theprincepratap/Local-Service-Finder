@@ -8,7 +8,9 @@ const {
   getRecentBookings,
   getNotifications,
   getUserReviews,
-  searchWorkers
+  searchWorkers,
+  updateLocation,
+  getLocationHistory
 } = require('../controllers/user.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
@@ -18,6 +20,10 @@ router.use(protect);
 // Profile routes
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
+
+// Location routes
+router.put('/location', updateLocation);
+router.get('/location/history', getLocationHistory);
 
 // Dashboard routes
 router.get('/dashboard/stats', getDashboardStats);
@@ -30,3 +36,4 @@ router.get('/reviews', getUserReviews);
 router.get('/search-workers', searchWorkers);
 
 module.exports = router;
+

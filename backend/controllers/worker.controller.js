@@ -1,8 +1,10 @@
-const Worker = require('../models/Worker.model');
+const WorkerUser = require('../models/WorkerUser.model');
 const User = require('../models/User.model');
 const Booking = require('../models/Booking.model');
 const { errorResponse, successResponse, getPaginationMeta, paginate } = require('../utils/helpers');
 const { sortByDistance, smartSort } = require('../utils/location.utils');
+const { deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
+const { uploadProfileImage: uploadToCloudinary, uploadDocumentImage } = require('../utils/cloudinary.helper');
 
 // @desc    Register as worker
 // @route   POST /api/workers/register
@@ -150,25 +152,46 @@ exports.getNearbyWorkers = async (req, res) => {
 // @access  Public
 exports.getWorkerById = async (req, res) => {
   try {
-    const worker = await Worker.findById(req.params.id)
-      .populate('userId', 'name email phone profileImage createdAt');
+    console.log('🔍 Fetching worker by ID:', req.params.id);
+    
+    // Validate ObjectId format
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ Invalid ObjectId format:', req.params.id);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid worker ID format'
+      });
+    }
+    
+    const worker = await WorkerUser.findById(req.params.id)
+      .select('-password -resetPasswordToken -resetPasswordExpire -bankDetails.accountNumber -bankDetails.ifscCode');
 
     if (!worker) {
+      console.log('❌ Worker not found (ID:', req.params.id + ')');
       return res.status(404).json({
         success: false,
         message: 'Worker not found'
       });
     }
 
-    // Get recent reviews
-    const Review = require('../models/Review.model');
-    const reviews = await Review.find({ workerId: worker._id })
-      .populate('userId', 'name profileImage')
-      .sort('-createdAt')
-      .limit(5);
+    console.log('✅ Worker found:', worker.name, '| Role:', worker.role, '| Status:', worker.approvalStatus);
 
-    successResponse(res, { worker, reviews }, 'Worker fetched successfully');
+    // Get recent reviews
+    try {
+      const Review = require('../models/Review.model');
+      const reviews = await Review.find({ workerId: worker._id })
+        .populate('userId', 'name profileImage')
+        .sort('-createdAt')
+        .limit(5);
+      
+      successResponse(res, { worker, reviews }, 'Worker fetched successfully');
+    } catch (reviewError) {
+      console.log('⚠️ Could not fetch reviews:', reviewError.message);
+      // Return worker without reviews if review fetch fails
+      successResponse(res, { worker, reviews: [] }, 'Worker fetched successfully');
+    }
   } catch (error) {
+    console.error('❌ Error fetching worker:', error);
     errorResponse(res, error, 500);
   }
 };
@@ -347,6 +370,143 @@ exports.getDashboardStats = async (req, res) => {
     successResponse(res, stats, 'Dashboard stats fetched successfully');
   } catch (error) {
     console.error('Worker dashboard stats error:', error);
+    errorResponse(res, error, 500);
+  }
+};
+
+// @desc    Get worker profile (for editing)
+// @route   GET /api/workers/profile
+// @access  Private (Worker)
+exports.getWorkerProfile = async (req, res) => {
+  try {
+    const worker = await Worker.findOne({ userId: req.user._id }).populate('userId', 'name email phone profileImage');
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker profile not found'
+      });
+    }
+
+    successResponse(res, worker, 'Worker profile fetched successfully');
+  } catch (error) {
+    errorResponse(res, error, 500);
+  }
+};
+
+// @desc    Upload profile image
+// @route   POST /api/workers/profile/image
+// @access  Private (Worker)
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file'
+      });
+    }
+
+    const User = require('../models/User.model');
+    
+    // Get user to check for old image
+    const user = await User.findById(req.user._id);
+    
+    // Delete old profile image from Cloudinary if exists
+    if (user.profileImage && user.profileImage.includes('cloudinary.com')) {
+      const oldPublicId = getPublicIdFromUrl(user.profileImage);
+      if (oldPublicId) {
+        try {
+          await deleteImage(oldPublicId);
+          console.log('🗑️ Deleted old profile image from Cloudinary');
+        } catch (error) {
+          console.log('⚠️ Could not delete old image:', error.message);
+        }
+      }
+    }
+
+    // Upload to Cloudinary
+    const imageUrl = await uploadToCloudinary(req.file.buffer);
+    console.log('✅ Profile image uploaded to Cloudinary:', imageUrl);
+
+    // Update user's profile image with Cloudinary URL
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { profileImage: imageUrl },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    successResponse(res, { profileImage: imageUrl }, 'Profile image uploaded successfully');
+  } catch (error) {
+    console.error('❌ Profile image upload error:', error);
+    errorResponse(res, error, 500);
+  }
+};
+
+// @desc    Upload worker document
+// @route   POST /api/workers/profile/document
+// @access  Private (Worker)
+exports.uploadWorkerDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a document'
+      });
+    }
+
+    const { docType } = req.body;
+    
+    if (!['idProof', 'addressProof', 'certificate'].includes(docType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document type'
+      });
+    }
+
+    // Get worker to check for old document
+    const worker = await Worker.findOne({ userId: req.user._id });
+    
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker profile not found'
+      });
+    }
+
+    // Delete old document from Cloudinary if exists
+    if (worker.documents && worker.documents[docType] && worker.documents[docType].includes('cloudinary.com')) {
+      const oldPublicId = getPublicIdFromUrl(worker.documents[docType]);
+      if (oldPublicId) {
+        try {
+          await deleteImage(oldPublicId);
+          console.log(`🗑️ Deleted old ${docType} from Cloudinary`);
+        } catch (error) {
+          console.log('⚠️ Could not delete old document:', error.message);
+        }
+      }
+    }
+
+    // Upload document to Cloudinary
+    const documentUrl = await uploadDocumentImage(req.file.buffer, docType);
+    console.log(`✅ ${docType} uploaded to Cloudinary:`, documentUrl);
+
+    // Update worker document with Cloudinary URL
+    const updatedWorker = await Worker.findOneAndUpdate(
+      { userId: req.user._id },
+      { [`documents.${docType}`]: documentUrl },
+      { new: true }
+    );
+
+    successResponse(res, { documentUrl }, `${docType} uploaded successfully`);
+  } catch (error) {
+    console.error('❌ Document upload error:', error);
     errorResponse(res, error, 500);
   }
 };

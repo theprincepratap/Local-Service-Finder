@@ -69,12 +69,18 @@ io.on('connection', (socket) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/auth', require('./routes/adminAuth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/workers', require('./routes/worker.routes'));
 app.use('/api/bookings', require('./routes/booking.routes'));
 app.use('/api/reviews', require('./routes/review.routes'));
 app.use('/api/payments', require('./routes/payment.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/search', require('./routes/search.routes'));
+app.use('/api/ai-search', require('./routes/aiSearch.routes'));  // NEW: AI-powered search routes
+app.use('/api/worker/dashboard', require('./routes/workerDashboard.routes'));
+app.use('/api/location', require('./routes/location.routes'));  // Location routes
+app.use('/api/algorithms', require('./routes/algorithms.routes'));  // NEW: Advanced algorithms
 
 // Health check route
 app.get('/api/health', (req, res) => {

@@ -355,13 +355,5 @@ exports.getReviewStats = async (req, res) => {
   }
 };
 
-module.exports = {
-  createReview,
-  getWorkerReviews,
-  getUserReviews,
-  updateReview,
-  deleteReview,
-  respondToReview,
-  markHelpful,
-  getReviewStats
-};
+// Note: All functions are already exported using exports.functionName pattern above
+// No need for module.exports object

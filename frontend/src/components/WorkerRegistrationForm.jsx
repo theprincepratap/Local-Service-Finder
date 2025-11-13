@@ -384,7 +384,7 @@ const WorkerRegistrationForm = () => {
                   value={formData.name}
                   onChange={handleChange}
                   className={`input pl-10 ${errors.name ? 'border-red-500' : ''}`}
-                  placeholder="John Doe"
+                  placeholder="Prince Kumar"
                 />
               </div>
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}

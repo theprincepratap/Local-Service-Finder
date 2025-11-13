@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'worker', 'admin'],
+    enum: ['user', 'worker'],
     default: 'user'
   },
   profileImage: {
@@ -52,16 +52,49 @@ const userSchema = new mongoose.Schema({
     address: {
       type: String
     },
-    city: {
-      type: String
+    // NEW: Store detected address from geolocation API
+    detectedAddress: {
+      type: String  // Full detected address text
     },
-    state: {
-      type: String
+    // NEW: Parsed address components for easier querying
+    parsedAddress: {
+      street: String,      // "Vandalur - Mambakkam - Kelambakkam Road"
+      area: String,        // "Kolapakkam"
+      city: String,        // "Tirupporur"
+      district: String,    // "Chengalpattu"
+      state: String,       // "Tamil Nadu"
+      pincode: String,     // "600127"
+      country: String      // "India"
     },
-    pincode: {
-      type: String
+    // NEW: Location keywords for text search
+    keywords: {
+      street: String,
+      area: String,
+      city: String,
+      district: String,
+      state: String,
+      pincode: String,
+      country: String,
+      fullAddress: String  // Combined for full-text search
+    },
+    capturedAt: {
+      type: Date // When location was captured
+    },
+    accuracy: {
+      type: Number // Location accuracy in meters
     }
   },
+  locationHistory: [{
+    coordinates: {
+      type: [Number] // [longitude, latitude]
+    },
+    address: String,
+    capturedAt: {
+      type: Date,
+      default: Date.now
+    },
+    accuracy: Number
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -70,6 +103,32 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  wallet: {
+    type: Number,
+    default: 50000,
+    min: [0, 'Wallet balance cannot be negative']
+  },
+  walletHistory: [{
+    amount: {
+      type: Number,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['credit', 'debit'],
+      required: true
+    },
+    description: String,
+    bookingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking'
+    },
+    balanceAfter: Number,
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
@@ -100,5 +159,14 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 
 // Create GeoJSON index for location-based queries
 userSchema.index({ location: '2dsphere' });
+
+// Create text indexes for location keyword search
+userSchema.index({ 'location.keywords.street': 'text' });
+userSchema.index({ 'location.keywords.area': 'text' });
+userSchema.index({ 'location.keywords.city': 'text' });
+userSchema.index({ 'location.keywords.district': 'text' });
+userSchema.index({ 'location.keywords.state': 'text' });
+userSchema.index({ 'location.keywords.pincode': 'text' });
+userSchema.index({ 'location.keywords.fullAddress': 'text' });
 
 module.exports = mongoose.model('User', userSchema);

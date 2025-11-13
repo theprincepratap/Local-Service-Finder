@@ -7,8 +7,15 @@ const LocationCapture = ({ onLocationCapture, required = false, className = '' }
   const [coordinates, setCoordinates] = useState(null);
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
+  const [isRequesting, setIsRequesting] = useState(false); // Prevent duplicate requests
 
   const requestLocation = () => {
+    // Prevent duplicate simultaneous requests
+    if (isRequesting) {
+      console.log('⚠️ Location request already in progress, skipping...');
+      return;
+    }
+
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       setLocationStatus('error');
@@ -16,6 +23,7 @@ const LocationCapture = ({ onLocationCapture, required = false, className = '' }
       return;
     }
 
+    setIsRequesting(true);
     setLocationStatus('loading');
     setError('');
 
@@ -26,6 +34,7 @@ const LocationCapture = ({ onLocationCapture, required = false, className = '' }
         
         setCoordinates(coords);
         setLocationStatus('success');
+        setIsRequesting(false);
         
         // Reverse geocoding to get address
         try {
@@ -62,6 +71,7 @@ const LocationCapture = ({ onLocationCapture, required = false, className = '' }
       },
       (error) => {
         setLocationStatus('error');
+        setIsRequesting(false);
         let errorMessage = '';
         
         switch (error.code) {
@@ -90,11 +100,12 @@ const LocationCapture = ({ onLocationCapture, required = false, className = '' }
   };
 
   useEffect(() => {
-    // Auto-request location if required
+    // Auto-request location if required (only once on mount)
     if (required && locationStatus === 'idle') {
       requestLocation();
     }
-  }, [required]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   const getStatusIcon = () => {
     switch (locationStatus) {

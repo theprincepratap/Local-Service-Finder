@@ -20,6 +20,7 @@ const Register = () => {
     coordinates: null,
     latitude: null,
     longitude: null,
+    detectedAddress: null, // Add this for captured address
   });
 
   const [errors, setErrors] = useState({});
@@ -87,11 +88,13 @@ const Register = () => {
   };
 
   const handleLocationCapture = (locationData) => {
+    console.log('📍 Location captured in Register form:', locationData);
     setFormData(prev => ({
       ...prev,
       coordinates: locationData.coordinates,
       latitude: locationData.latitude,
-      longitude: locationData.longitude
+      longitude: locationData.longitude,
+      detectedAddress: locationData.address // Store the detected address
     }));
   };
 
@@ -114,14 +117,14 @@ const Register = () => {
       if (registrationData.coordinates) {
         registrationData.location = {
           coordinates: registrationData.coordinates,
-          address: '',
-          city: '',
-          state: '',
-          pincode: ''
+          latitude: registrationData.latitude,
+          longitude: registrationData.longitude,
+          detectedAddress: registrationData.detectedAddress, // Include detected address
+          address: registrationData.detectedAddress // For backward compatibility
         };
       }
       
-      console.log('User registration data:', registrationData); // Debug log
+      console.log('📝 User registration data:', registrationData); // Debug log
       
       await register(registrationData);
       toast.success(`Registration successful! Welcome ${registerType === 'worker' ? 'to our worker community' : 'aboard'}!`);
@@ -130,7 +133,7 @@ const Register = () => {
       const destination = registerType === 'worker' ? '/worker/dashboard' : '/dashboard';
       navigate(destination);
     } catch (error) {
-      console.error('User registration error:', error); // Debug log
+      console.error('❌ User registration error:', error); // Debug log
       const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
       toast.error(errorMessage);
       

@@ -72,11 +72,10 @@ exports.getDashboardStats = async (req, res) => {
     // Calculate total spent
     const completedBookingsData = await Booking.find({ 
       userId, 
-      status: 'completed',
-      paymentStatus: 'completed'
+      status: 'completed'
     }).select('totalPrice');
     
-    const totalSpent = completedBookingsData.reduce((sum, booking) => sum + booking.totalPrice, 0);
+    const totalSpent = completedBookingsData.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
 
     // Get favorite workers (workers with multiple bookings)
     const favoriteWorkers = await Booking.aggregate([
@@ -86,28 +85,19 @@ exports.getDashboardStats = async (req, res) => {
       { $limit: 3 },
       {
         $lookup: {
-          from: 'workers',
+          from: 'workerusers',
           localField: '_id',
           foreignField: '_id',
           as: 'worker'
         }
       },
-      { $unwind: '$worker' },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'worker.userId',
-          foreignField: '_id',
-          as: 'workerUser'
-        }
-      },
-      { $unwind: '$workerUser' },
+      { $unwind: { path: '$worker', preserveNullAndEmptyArrays: true } },
       {
         $project: {
           workerId: '$_id',
           bookingCount: '$count',
-          name: '$workerUser.name',
-          profileImage: '$workerUser.profileImage',
+          name: '$worker.name',
+          profileImage: '$worker.profileImage',
           categories: '$worker.categories',
           rating: '$worker.rating'
         }
@@ -362,13 +352,109 @@ exports.searchWorkers = async (req, res) => {
   }
 };
 
-module.exports = {
-  getProfile,
-  updateProfile,
-  getDashboardStats,
-  getUserBookings,
-  getRecentBookings,
-  getNotifications,
-  getUserReviews,
-  searchWorkers
+// @desc    Update user live location
+// @route   PUT /api/users/location
+// @access  Private
+exports.updateLocation = async (req, res) => {
+  try {
+    const { coordinates, address, city, state, pincode, accuracy } = req.body;
+
+    // Validate coordinates
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid coordinates [longitude, latitude]'
+      });
+    }
+
+    const [longitude, latitude] = coordinates;
+
+    // Validate longitude and latitude ranges
+    if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates. Longitude must be between -180 and 180, latitude between -90 and 90'
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update current location
+    user.location = {
+      type: 'Point',
+      coordinates: [longitude, latitude],
+      address: address || user.location.address,
+      city: city || user.location.city,
+      state: state || user.location.state,
+      pincode: pincode || user.location.pincode,
+      capturedAt: new Date(),
+      accuracy: accuracy || null
+    };
+
+    // Add to location history (keep last 50 locations)
+    if (!user.locationHistory) {
+      user.locationHistory = [];
+    }
+
+    user.locationHistory.unshift({
+      coordinates: [longitude, latitude],
+      address: address,
+      capturedAt: new Date(),
+      accuracy: accuracy
+    });
+
+    // Keep only last 50 location entries
+    if (user.locationHistory.length > 50) {
+      user.locationHistory = user.locationHistory.slice(0, 50);
+    }
+
+    await user.save();
+
+    successResponse(res, {
+      location: user.location,
+      locationHistory: user.locationHistory
+    }, 'Location updated successfully');
+  } catch (error) {
+    console.error('Update location error:', error);
+    errorResponse(res, error, 500);
+  }
 };
+
+// @desc    Get user location history
+// @route   GET /api/users/location/history
+// @access  Private
+exports.getLocationHistory = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const user = await User.findById(req.user._id).select('locationHistory location');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const history = user.locationHistory ? user.locationHistory.slice(0, parseInt(limit)) : [];
+
+    successResponse(res, {
+      currentLocation: user.location,
+      history: history,
+      total: user.locationHistory ? user.locationHistory.length : 0
+    }, 'Location history retrieved successfully');
+  } catch (error) {
+    errorResponse(res, error, 500);
+  }
+};
+
+// Note: All functions are already exported using exports.functionName pattern above
+// No need for module.exports object
+

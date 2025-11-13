@@ -1,34 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const adminController = require('../controllers/admin.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // All admin routes are protected and require admin role
 router.use(protect);
 router.use(authorize('admin'));
 
-// Placeholder routes - to be implemented
-router.get('/dashboard', (req, res) => {
-  res.json({ success: true, message: 'Admin dashboard - Coming soon' });
-});
+// Dashboard
+router.get('/dashboard/stats', adminController.getDashboardStats);
+router.get('/system/stats', adminController.getSystemStats);
+router.get('/revenue/analytics', adminController.getRevenueAnalytics);
 
-router.get('/users', (req, res) => {
-  res.json({ success: true, message: 'Get all users - Coming soon' });
-});
+// User Management
+router.get('/users', adminController.getAllUsers);
+router.patch('/users/:userId/toggle-status', adminController.toggleUserStatus);
+router.delete('/users/:userId', adminController.deleteUser);
 
-router.get('/workers', (req, res) => {
-  res.json({ success: true, message: 'Get all workers - Coming soon' });
-});
+// Worker Management
+router.get('/workers', adminController.getAllWorkers);
+router.patch('/workers/:workerId/approve', adminController.approveWorker);
+router.patch('/workers/:workerId/reject', adminController.rejectWorker);
 
-router.put('/workers/:id/verify', (req, res) => {
-  res.json({ success: true, message: 'Verify worker - Coming soon' });
-});
+// Booking Management
+router.get('/bookings', adminController.getAllBookings);
+router.patch('/bookings/:bookingId/status', adminController.updateBookingStatus);
 
-router.get('/bookings', (req, res) => {
-  res.json({ success: true, message: 'Get all bookings - Coming soon' });
-});
-
-router.get('/analytics', (req, res) => {
-  res.json({ success: true, message: 'Get analytics - Coming soon' });
-});
+// Review Management
+router.get('/reviews', adminController.getAllReviews);
+router.delete('/reviews/:reviewId', adminController.deleteReview);
 
 module.exports = router;

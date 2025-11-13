@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FiMenu, FiX, FiUser, FiLogOut } from 'react-icons/fi';
 import { useState } from 'react';
@@ -7,7 +7,13 @@ import toast from 'react-hot-toast';
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Hide navbar on dashboard pages
+  const isDashboardPage = location.pathname === '/dashboard' || 
+                          location.pathname === '/worker/dashboard' || 
+                          location.pathname === '/admin/dashboard';
 
   const handleLogout = () => {
     logout();
@@ -15,6 +21,17 @@ const Navbar = () => {
     toast.success('Logged out successfully!');
     navigate('/');
   };
+
+  // Navigate to appropriate dashboard based on user role
+  const getDashboardLink = () => {
+    if (!isAuthenticated) return '/login';
+    return user?.role === 'worker' ? '/worker/dashboard' : '/dashboard';
+  };
+
+  // Hide navbar on dashboard pages
+  if (isDashboardPage && isAuthenticated) {
+    return null;
+  }
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -36,7 +53,7 @@ const Navbar = () => {
             
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition">
+                <Link to={getDashboardLink()} className="text-gray-700 hover:text-primary-600 transition">
                   Dashboard
                 </Link>
                 <div className="flex items-center space-x-3">
@@ -92,7 +109,7 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to={getDashboardLink()}
                   className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                   onClick={() => setIsMenuOpen(false)}
                 >

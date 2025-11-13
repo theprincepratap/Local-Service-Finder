@@ -63,9 +63,34 @@ const workerSchema = new mongoose.Schema({
       index: '2dsphere'
     },
     address: String,
-    city: String,
-    state: String,
-    pincode: String
+    // NEW: Store detected address from geolocation API
+    detectedAddress: String,  // Full detected address text
+    
+    // NEW: Parsed address components for easier querying
+    parsedAddress: {
+      street: String,      // "Vandalur - Mambakkam - Kelambakkam Road"
+      area: String,        // "Kolapakkam"
+      city: String,        // "Tirupporur"
+      district: String,    // "Chengalpattu"
+      state: String,       // "Tamil Nadu"
+      pincode: String,     // "600127"
+      country: String      // "India"
+    },
+    
+    // Location keywords for text-based matching
+    keywords: {
+      street: String,
+      area: String,
+      city: String,
+      district: String,
+      state: String,
+      pincode: String,
+      country: String,
+      fullAddress: String     // "Full detected address for search"
+    },
+    
+    capturedAt: Date,        // When location was captured
+    accuracy: Number         // Location accuracy in meters
   },
   serviceRadius: {
     type: Number, // in kilometers
@@ -126,6 +151,31 @@ const workerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvalMessage: {
+    type: String
+  },
+  approvedAt: {
+    type: Date
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  rejectedAt: {
+    type: Date
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  suspensionReason: {
+    type: String
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -143,5 +193,16 @@ workerSchema.index({ location: '2dsphere' });
 workerSchema.index({ rating: -1 });
 workerSchema.index({ pricePerHour: 1 });
 workerSchema.index({ categories: 1 });
+
+// Create text indexes for location keyword search
+workerSchema.index({ 'location.keywords.street': 'text' });
+workerSchema.index({ 'location.keywords.area': 'text' });
+workerSchema.index({ 'location.keywords.city': 'text' });
+workerSchema.index({ 'location.keywords.district': 'text' });
+workerSchema.index({ 'location.keywords.state': 'text' });
+workerSchema.index({ 'location.keywords.pincode': 'text' });
+workerSchema.index({ 'location.keywords.fullAddress': 'text' });
+workerSchema.index({ 'location.keywords.city': 'text', 'location.keywords.area': 'text' });
+workerSchema.index({ skills: 'text', 'location.keywords.city': 'text' });
 
 module.exports = mongoose.model('Worker', workerSchema);

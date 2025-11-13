@@ -40,8 +40,7 @@ const paymentSchema = new mongoose.Schema({
     default: 'razorpay'
   },
   transactionId: {
-    type: String,
-    sparse: true
+    type: String
   },
   razorpayOrderId: String,
   razorpayPaymentId: String,

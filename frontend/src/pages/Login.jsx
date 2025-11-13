@@ -87,48 +87,9 @@ const Login = () => {
       console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';
       toast.error(errorMessage);
+      // DO NOT redirect on error - stay on login page and let user try again
+      return;
     }
-  };
-
-  // Demo Worker Login (for testing when MongoDB is down)
-  const handleDemoWorkerLogin = () => {
-    const demoWorker = {
-      _id: 'demo-worker-123',
-      name: 'Demo Worker',
-      email: 'worker@demo.com',
-      role: 'worker',
-      phone: '+91 9876543210',
-      avatar: null,
-    };
-    
-    // Manually set the auth state
-    const setAuth = useAuthStore.getState().setAuth;
-    setAuth(demoWorker, 'demo-token-123');
-    
-    toast.success('Logged in as Demo Worker!');
-    setTimeout(() => {
-      navigate('/worker/dashboard', { replace: true });
-    }, 500);
-  };
-
-  const handleDemoUserLogin = () => {
-    const demoUser = {
-      _id: 'demo-user-123',
-      name: 'Demo User',
-      email: 'user@demo.com',
-      role: 'user',
-      phone: '+91 9876543210',
-      avatar: null,
-    };
-    
-    // Manually set the auth state
-    const setAuth = useAuthStore.getState().setAuth;
-    setAuth(demoUser, 'demo-token-456');
-    
-    toast.success('Logged in as Demo User!');
-    setTimeout(() => {
-      navigate('/dashboard', { replace: true });
-    }, 500);
   };
 
   // If no login type is selected, show the choice screen
@@ -366,75 +327,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Demo Credentials (Development Only) */}
-          {import.meta.env.DEV && (
-            <div className="mt-4 space-y-3">
-              {loginType === 'worker' ? (
-                <>
-                  {/* Demo Worker Login Button */}
-                  <button
-                    type="button"
-                    onClick={handleDemoWorkerLogin}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <FiBriefcase className="w-5 h-5" />
-                    Demo Worker Login (Test Dashboard)
-                  </button>
-                  
-                  {/* Worker Demo Credentials */}
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <p className="text-xs text-green-800 font-semibold mb-2">Worker Demo:</p>
-                    <div className="text-xs text-green-700 space-y-1">
-                      <p>📧 Email: worker@demo.com</p>
-                      <p>🔒 Password: worker123</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({ email: 'worker@demo.com', password: 'worker123' });
-                        toast.info('Demo credentials filled!');
-                      }}
-                      className="mt-2 text-xs text-green-600 hover:text-green-800 font-medium"
-                    >
-                      Click to auto-fill demo credentials
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Demo User Login Button */}
-                  <button
-                    type="button"
-                    onClick={handleDemoUserLogin}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <FiUser className="w-5 h-5" />
-                    Demo User Login (Quick Test)
-                  </button>
-                  
-                  {/* User Demo Credentials */}
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-xs text-blue-800 font-semibold mb-2">User Demo:</p>
-                    <div className="text-xs text-blue-700 space-y-1">
-                      <p>📧 Email: user@demo.com</p>
-                      <p>🔒 Password: user123</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({ email: 'user@demo.com', password: 'user123' });
-                        toast.info('Demo credentials filled!');
-                      }}
-                      className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Click to auto-fill demo credentials
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
           {/* Register Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
@@ -450,6 +342,17 @@ const Login = () => {
                 {loginType === 'worker' ? 'Register as Worker' : 'Sign up for free'}
               </Link>
             </p>
+          </div>
+
+          {/* Admin Login Link */}
+          <div className="mt-4 text-center">
+            <Link 
+              to="/admin/login" 
+              className="inline-flex items-center text-xs text-gray-500 hover:text-red-600 transition-colors"
+            >
+              <FiLock className="w-3 h-3 mr-1" />
+              Administrator Login
+            </Link>
           </div>
         </div>
 

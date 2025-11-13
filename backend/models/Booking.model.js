@@ -8,7 +8,7 @@ const bookingSchema = new mongoose.Schema({
   },
   workerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Worker',
+    ref: 'WorkerUser',
     required: true
   },
   serviceType: {
@@ -53,7 +53,7 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     enum: [
       'pending',
-      'accepted',
+      'confirmed',
       'rejected',
       'on-the-way',
       'in-progress',

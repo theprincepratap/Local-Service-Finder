@@ -6,7 +6,9 @@ const {
   getWorkerBookings,
   getBookingById,
   updateBookingStatus,
-  cancelBooking
+  cancelBooking,
+  updateWorkerLocationForBooking,
+  getWorkerLocationForBooking
 } = require('../controllers/booking.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
@@ -19,5 +21,9 @@ router.get('/worker-bookings', authorize('worker'), getWorkerBookings);
 router.get('/:id', getBookingById);
 router.put('/:id/status', authorize('worker'), updateBookingStatus);
 router.put('/:id/cancel', cancelBooking);
+
+// Real-time location tracking routes
+router.put('/:id/worker-location', authorize('worker'), updateWorkerLocationForBooking);
+router.get('/:id/worker-location', getWorkerLocationForBooking);
 
 module.exports = router;

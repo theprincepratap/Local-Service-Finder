@@ -1,46 +1,56 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../uploads/profiles');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Use memory storage for Cloudinary upload
+const storage = multer.memoryStorage();
 
-// Configure storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// File filter
-const fileFilter = (req, file, cb) => {
-  // Allowed file types
-  const allowedTypes = /jpeg|jpg|png|gif/;
+// File filter for images
+const imageFileFilter = (req, file, cb) => {
+  // Allowed image types
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
 
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Only image files (jpeg, jpg, png, gif) are allowed!'));
+    cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed!'));
   }
 };
 
-// Upload configuration
-const upload = multer({
+// File filter for documents
+const documentFileFilter = (req, file, cb) => {
+  // Allowed document types
+  const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = /image\/(jpeg|jpg|png)|application\/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document)/.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only image and document files (jpeg, jpg, png, pdf, doc, docx) are allowed!'));
+  }
+};
+
+// Upload configuration for images
+const uploadImage = multer({
   storage: storage,
   limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB limit
+    fileSize: 5 * 1024 * 1024 // 5MB limit for images
   },
-  fileFilter: fileFilter
+  fileFilter: imageFileFilter
 });
 
-module.exports = upload;
+// Upload configuration for documents
+const uploadDocument = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit for documents
+  },
+  fileFilter: documentFileFilter
+});
+
+module.exports = {
+  uploadImage,
+  uploadDocument
+};
